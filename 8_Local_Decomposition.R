@@ -24,7 +24,7 @@ package.check <- lapply(
 
 
 #Dataframe with categories Out, In, Cat and Moves
-Age_In_Out = read.csv("Paper_Merged_Ages_2019.csv")%>%
+In_Out_Cat = read.csv("Paper_Merged_Ages_2019.csv")%>%
   select(-1)%>%
   #mutate(Cat = factor(Cat, levels =c("School", "University", "Early_Work", "Family_Starters", "Family_Raising","Older_Working", "Retirement")))%>%
   rename(Out = 1, In = 2, Cat = 3, Moves = 4)
@@ -36,57 +36,60 @@ Full_Gini = read.csv("Full_Gini.csv")%>%select(-1)%>%rename(In = 2, Out = 3)
 #####Calculating the inequality of flows IN TO an LAD
 
 #Sk - how many of each age group, as a proportion of the LAD
-  #Calculate Sk_IN
-
-#Inwards: How many migrants are received by each place in total
-Sk_In = DF%>%group_by(In, Cat) %>%
-  summarise(Cat_Moves = sum(Moves))%>%
-  spread(., key = Cat, value = Cat_Moves)%>%
-  as.data.frame()
-rownames(Sk_In)<-Sk_In[,1]
-Sk_In = Sk_In[,-1]
-
-Sk_In$Sums = rowSums(Sk_In)
-
-#Proportion - number of migrants arriving from each category, divided by number overall for that origin
-for (i in c(1:ncol(Sk_In))){
-  Sk_In[,i] = Sk_In[,i]/Sk_In$Sums
+Sk_Function = function(DF){
+  #Calculate Sk_in
+  #Inwards: How many migrants are received by each place in total
+  
+  Sk_In = DF%>%group_by(In, Cat) %>%
+    summarise(Cat_Moves = sum(Moves))%>%
+    spread(., key = Cat, value = Cat_Moves)%>%
+    as.data.frame()
+  rownames(Sk_In)<-Sk_In[,1]
+  
+  Sk_In = Sk_In[,-1]%>%
+    mutate(Sums = rowSums(.))
+  
+  #Sk_In$Sums = rowSums(Sk_In)
+  
+  #Proportion - number of migrants arriving from each category, divided by number overall for that origin
+  for (i in c(1:ncol(Sk_In))){
+    Sk_In[,i] = Sk_In[,i]/Sk_In$Sums
+    }
+  Sk_In = Sk_In %>% select(-Sums)
+  colnames(Sk_In) <- paste("In", colnames(Sk_In), sep = "_")
+  Sk_In <- tibble::rownames_to_column(Sk_In, "LAD")
+  
+  
+  #Sk_Out - group by number of people leaving the area
+  Sk_Out = DF%>%group_by(Out, Cat) %>%
+    summarise(Cat_Moves = sum(Moves))%>%
+    spread(., key = Cat, value = Cat_Moves)%>%
+    as.data.frame()
+  
+  rownames(Sk_Out)<-Sk_Out[,1]
+  
+  Sk_Out = Sk_Out[,-1]%>%
+    mutate(Sums = rowSums(.))
+  for (i in c(1:ncol(Sk_Out))){
+    Sk_Out[,i] = Sk_Out[,i]/Sk_Out$Sums
+    }
+  Sk_Out = Sk_Out %>% select(-Sums)
+  colnames(Sk_Out) <- paste("Out", colnames(Sk_Out), sep = "_")
+  
+  Sk_Out <- tibble::rownames_to_column(Sk_Out, "LAD")
+  
+  Sk_All = merge(Sk_In, Sk_Out, by = "LAD")
+  
+  return(Sk_All)
 }
-
-Sk_In = Sk_In %>% select(-Sums)
-#Sk_In$Sums = rowSums(Sk_In[,1:7])
-colnames(Sk_In) <- paste("In", colnames(Sk_In), sep = "_")
-Sk_In <- tibble::rownames_to_column(Sk_In, "LAD")
-
-#Sk_Out - group by number of people leaving the area
-Sk_Out = DF%>%group_by(Out, Cat) %>%
-  summarise(Cat_Moves = sum(Moves))%>%
-  spread(., key = Cat, value = Cat_Moves)%>%
-  as.data.frame()
-rownames(Sk_Out)<-Sk_Out[,1]
-Sk_Out = Sk_Out[,-1]
-
-Sk_Out$Sums = rowSums(Sk_Out)
-
-for (i in c(1:ncol(Sk_Out))){
-  Sk_Out[,i] = Sk_Out[,i]/Sk_Out$Sums
-}
-Sk_Out = Sk_Out %>% select(-Sums)
-
-
-colnames(Sk_Out) <- paste("Out", colnames(Sk_Out), sep = "_")
-Sk_Out <- tibble::rownames_to_column(Sk_Out, "LAD")
-
-
-Sk_All = merge(Sk_In, Sk_Out, by = "LAD")
-
+Sk_All = Sk_Function((In_Out_Cat))
 
 #Gk - inequality for each age group in each LAD
 
-Categories = unique(DF$Cat)
+Categories = unique(In_Out_Cat$Cat)
 
 
-Gk = data.frame(LAD = unique(DF$In))
+Gk = data.frame(LAD = unique(In_Out_Cat$In))
 Gk_Function = function(Categories){
   OD_Matrix = DF%>%filter(.,Cat == Categories)%>%select(-c("Cat"))%>% acast(., Out~ In, mean)
   OD_Matrix[is.na(OD_Matrix)]<-0
