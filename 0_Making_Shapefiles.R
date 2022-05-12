@@ -3,7 +3,7 @@
 ##-Making LAD files
 
 #Set the path
-Path = "C:/Users/b9054751/OneDrive - Newcastle University/PhD/Data/Migration"
+Path = getwd()
 
 
 ## If a package is installed, it will be loaded. If any 
