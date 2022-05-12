@@ -1,4 +1,6 @@
-#In this file: Calculating Gini Index for 2019 only - input merged table, output table of gini results (national)
+#In this file: Calculating Gini Index for 2019 only - includes national level and local authority measures
+
+#Input merged table, output Full Gini results csv file (local authority) and table of gini results (national)
 
 ## If a package is installed, it will be loaded. If any 
 ## are not, the missing package(s) will be installed 
